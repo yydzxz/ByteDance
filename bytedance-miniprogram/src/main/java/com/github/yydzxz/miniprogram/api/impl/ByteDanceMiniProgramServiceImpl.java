@@ -1,0 +1,245 @@
+package com.github.yydzxz.miniprogram.api.impl;
+
+import cn.hutool.core.util.StrUtil;
+import com.github.yydzxz.common.error.ByteDanceErrorException;
+import com.github.yydzxz.common.error.IByteDanceError;
+import com.github.yydzxz.common.http.IByteDanceHttpClient;
+import com.github.yydzxz.common.http.IExecutable;
+import com.github.yydzxz.common.http.IRetryableExecutor;
+import com.github.yydzxz.common.util.ByteDanceAppIdHolder;
+import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramAccessTokenService;
+import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramConfigStorage;
+import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramLoginService;
+import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramService;
+import com.github.yydzxz.miniprogram.api.impl.request.INeedAccessTokenRequest;
+import com.github.yydzxz.miniprogram.api.impl.request.token.AccessTokenRequest;
+import com.github.yydzxz.miniprogram.api.impl.response.token.AccessTokenResponse;
+import com.github.yydzxz.miniprogram.error.ByteDanceMiniProgramCommonError;
+import com.github.yydzxz.miniprogram.error.ByteDanceMiniProgramContentSecurityCheckError;
+import com.github.yydzxz.miniprogram.error.ByteDanceMiniProgramUserStorageError;
+import com.github.yydzxz.miniprogram.error.ByteDanceMiniProgramErrorMsgEnum;
+import com.github.yydzxz.miniprogram.error.ByteDanceMiniProgramException;
+import com.github.yydzxz.miniprogram.error.ByteDanceMiniProgramImageCheckError;
+import com.github.yydzxz.miniprogram.error.ByteDanceMiniProgramQrCodeError;
+import com.google.common.collect.Multimap;
+import java.util.Objects;
+import java.util.concurrent.locks.Lock;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+
+/**
+ * @author yangyidian
+ * @date 2021/08/31
+ **/
+@Slf4j
+public class ByteDanceMiniProgramServiceImpl implements IByteDanceMiniProgramService, IRetryableExecutor {
+
+    @Getter
+    @Setter
+    private long retrySleepMillis = 1000;
+
+    @Getter
+    @Setter
+    private int maxRetryTimes = 5;
+
+    @Getter
+    @Setter
+    private IByteDanceHttpClient byteDanceHttpClient;
+
+    private IByteDanceMiniProgramConfigStorage byteDanceMiniProgramConfigStorage;
+
+    private IByteDanceMiniProgramAccessTokenService getByteDanceMiniProgramTokenService;
+
+    private IByteDanceMiniProgramLoginService getByteDanceMiniProgramLoginService;
+
+    public ByteDanceMiniProgramServiceImpl(IByteDanceHttpClient byteDanceHttpClient, IByteDanceMiniProgramConfigStorage byteDanceMiniProgramConfigStorage) {
+        this.byteDanceHttpClient = byteDanceHttpClient;
+        this.byteDanceMiniProgramConfigStorage = byteDanceMiniProgramConfigStorage;
+        this.getByteDanceMiniProgramTokenService = new ByteDanceMiniProgramAccessTokenServiceImpl(this);
+        this.getByteDanceMiniProgramLoginService = new ByteDanceMiniProgramLoginServiceImpl(this);
+    }
+
+    @Override
+    public IByteDanceMiniProgramConfigStorage getByteDanceMiniProgramConfigStorage() {
+        return byteDanceMiniProgramConfigStorage;
+    }
+
+    @Override
+    public IByteDanceMiniProgramAccessTokenService getByteDanceMiniProgramTokenService() {
+        return getByteDanceMiniProgramTokenService;
+    }
+
+    @Override
+    public IByteDanceMiniProgramLoginService getByteDanceMiniProgramLoginService() {
+        return getByteDanceMiniProgramLoginService;
+    }
+
+    @Override
+    public String getAccessToken(String appid) {
+        return getAccessToken(appid, false);
+    }
+
+    @Override
+    public String getAccessToken(String appId, boolean forceRefresh) {
+        if (!byteDanceMiniProgramConfigStorage.isAccessTokenExpired(appId) && !forceRefresh) {
+            return byteDanceMiniProgramConfigStorage.getAccessToken(appId);
+        }
+        Lock lock = byteDanceMiniProgramConfigStorage.getAccessTokenLock(appId);
+        lock.lock();
+        try {
+            if (!byteDanceMiniProgramConfigStorage.isAccessTokenExpired(appId) && !forceRefresh) {
+                return byteDanceMiniProgramConfigStorage.getAccessToken(appId);
+            }
+            if(byteDanceMiniProgramConfigStorage.getMiniProgramInfos().get(appId) == null){
+                throw new RuntimeException(appId + "尚未配置secret");
+            }
+            String appSecret = byteDanceMiniProgramConfigStorage.getMiniProgramInfos().get(appId).getAppSecret();
+//            String url = String.format("https://developer.toutiao.com/api/apps/token" + "?appid=%s&secret=%s&grant_type=client_credential", appId, appSecret);
+//            AccessTokenResponse response = get(url, AccessTokenResponse.class);
+
+            AccessTokenRequest request = new AccessTokenRequest(appId, appSecret);
+            AccessTokenResponse response = getByteDanceMiniProgramTokenService.getAccessToken(request);
+            byteDanceMiniProgramConfigStorage.updateAccessToken(appId, response.getAccessToken(), response.getExpiresIn());
+            return byteDanceMiniProgramConfigStorage.getAccessToken(appId);
+        } catch (Exception e){
+            log.error(e.getMessage(), e);
+            throw new RuntimeException(appId + "获取 AccessToken 失败");
+        }finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public String get(String url){
+        return get(url, String.class);
+    }
+
+    @Override
+    public <T> T get(String url, Class<T> t){
+        return retryableExecuteRequest((url2 ,headers, request2, t2)->{
+            return getInternal(url2, t2);
+        },url, null, null, t);
+    }
+
+    private <T> T getInternal(String url, Class<T> t){
+        return executeRequest(
+            (uriWithCommonParam, headers, request2, t2) -> {
+                return byteDanceHttpClient.get(uriWithCommonParam, t2);
+            },url, null, null, t
+        );
+    }
+
+    @Override
+    public <T> T post(String url, Object request, Class<T> t){
+        return retryableExecuteRequest((url2 , headers, request2 , t2)->{
+            return postInternal(url2, request2, t2);
+        },url, null, request, t);
+    }
+
+    private <T> T postInternal(String url, Object request, Class<T> t){
+        return executeRequest(
+            (uriWithCommonParam, headers, request2, t2) -> {
+                return byteDanceHttpClient.post(uriWithCommonParam, request2, t2);
+            },url, null, request, t
+        );
+    }
+
+    @Override
+    public <T> T postWithHeaders(String url, Multimap<String, String> headers, Object request, Class<T> t) {
+        return retryableExecuteRequest((url2 , headers2, request2 , t2)->{
+            return postWithHeadersInternal(url2, headers2, request2, t2);
+        },url, headers, request, t);
+    }
+
+    private <T> T postWithHeadersInternal(String url, Multimap<String, String> headers, Object request, Class<T> t){
+        return executeRequest(
+            (uriWithCommonParam, headers2, request2, t2) -> {
+                return byteDanceHttpClient.postWithHeaders(uriWithCommonParam, headers2, request2, t2);
+            },url, headers, request, t
+        );
+    }
+
+    private <T> T executeRequest(IExecutable<T> executable, String url, Multimap<String,String> headers, Object request, Class<T> t){
+        T response = null;
+        if(!(request instanceof INeedAccessTokenRequest)){
+            try {
+                return executable.execute(url, headers, request, t);
+            }catch (Exception e) {
+                log.error("\n【请求地址】: {}\n【异常信息】: {}", url, e.getMessage());
+                throw new RuntimeException(e);
+            }
+        }
+
+        String appId = ByteDanceAppIdHolder.get();
+        String accessToken = getAccessToken(appId);
+        try{
+            String uriWithCommonParam = url + (url.contains("?") ? "&" : "?") + "access_token=" + accessToken;
+            response = executable.execute(uriWithCommonParam, headers, request, t);
+        }catch (ByteDanceErrorException e){
+            if((shouldExpireAccessToken(e.getError()))){
+                // 强制设置access token过期，这样在下一次请求里就会刷新access token
+                Lock lock = getByteDanceMiniProgramConfigStorage().getAccessTokenLock(appId);
+                lock.lock();
+                try {
+                    if(StrUtil.equals(getAccessToken(appId, false), accessToken)){
+                        getByteDanceMiniProgramConfigStorage().expireAccessToken(appId);
+                    }
+                }catch (Exception ex){
+                    getByteDanceMiniProgramConfigStorage().expireAccessToken(appId);
+                }finally {
+                    lock.unlock();
+                }
+            }
+            if (!e.getError().checkSuccess()) {
+                log.error("\n【请求地址】: {}\n【错误信息】: {}", url, e.getError());
+                throw new ByteDanceMiniProgramException(appId, e.getError(), e);
+            }
+        } catch (Exception e) {
+            log.error("\n【请求地址】: {}\n【异常信息】: {}", url, e.getMessage());
+            throw new RuntimeException(e);
+        }
+        return response;
+    }
+
+    /**
+     * 是否让本地存储的accessToken过期
+     * 当字节跳动系统返回accessToken相关错误时，应该让本地存储的accessToken过期，不再可用
+     * @param error
+     * @return
+     */
+    protected boolean shouldExpireAccessToken(IByteDanceError error){
+        return error.accessTokenError();
+    }
+
+    /**
+     * 是否应该进行请求重试
+     * 当字节跳动系统响应系统错误或者accessToken失效时，应该重试
+     * @param error
+     * @return
+     */
+    @Override
+    public boolean shouldRetry(IByteDanceError error){
+        if(error.accessTokenError()){
+            return true;
+        }
+        if(error instanceof ByteDanceMiniProgramCommonError){
+            return ByteDanceMiniProgramErrorMsgEnum.CODE_NEGATIVE_1.getCode() == error.errorCode();
+        }else if(error instanceof ByteDanceMiniProgramContentSecurityCheckError){
+            return ByteDanceMiniProgramErrorMsgEnum.CODE_NEGATIVE_1.getCode() == error.errorCode();
+        }else if(error instanceof ByteDanceMiniProgramUserStorageError){
+            return ByteDanceMiniProgramErrorMsgEnum.CODE_NEGATIVE_1.getCode() == error.errorCode();
+        }else if(error instanceof ByteDanceMiniProgramImageCheckError){
+            return Objects.equals(error.errorCode(), 4);
+        }else if(error instanceof ByteDanceMiniProgramQrCodeError){
+            return ByteDanceMiniProgramErrorMsgEnum.CODE_NEGATIVE_1.getCode() == error.errorCode();
+        }
+        return false;
+    }
+
+    @Override
+    public Logger getLogger() {
+        return log;
+    }
+}
