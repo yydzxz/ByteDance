@@ -26,4 +26,16 @@ public class ByteDanceMiniProgramLoginServiceImpl implements IByteDanceMiniProgr
         String url = UrlUtil.buildUrl(CODE_2_SESSION_URL, request);
         return byteDanceMiniProgramService.get(url, Code2sessionResponse.class);
     }
+
+    @Override
+    public Code2sessionResponse code2sessionWithCode(String code, String anonymousCode) {
+        AbstractByteDanceMiniProgramInRedisConfigStorage.MiniProgramInfo config =
+                byteDanceMiniProgramService.getMiniProgramConfig();
+        Code2sessionRequest request = new Code2sessionRequest();
+        request.setCode(code);
+        request.setAnonymousCode(anonymousCode);
+        request.setAppid(config.getAppId());
+        request.setSecret(config.getAppSecret());
+        return this.code2session(request);
+    }
 }

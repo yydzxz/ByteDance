@@ -1,5 +1,6 @@
 package com.github.yydzxz.miniprogram.api;
 
+import com.github.yydzxz.miniprogram.api.impl.AbstractByteDanceMiniProgramInRedisConfigStorage;
 import com.google.common.collect.Multimap;
 
 /**
@@ -13,6 +14,10 @@ public interface IByteDanceMiniProgramService {
     IByteDanceMiniProgramAccessTokenService getByteDanceMiniProgramTokenService();
 
     IByteDanceMiniProgramLoginService getByteDanceMiniProgramLoginService();
+
+    boolean switchover(String appid);
+
+    AbstractByteDanceMiniProgramInRedisConfigStorage.MiniProgramInfo getMiniProgramConfig();
 
     String getAccessToken(String appid);
 
