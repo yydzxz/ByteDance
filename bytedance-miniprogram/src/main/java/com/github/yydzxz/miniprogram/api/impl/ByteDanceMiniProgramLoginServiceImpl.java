@@ -28,7 +28,7 @@ public class ByteDanceMiniProgramLoginServiceImpl implements IByteDanceMiniProgr
     }
 
     @Override
-    public Code2sessionResponse code2sessionWithCode(String code, String anonymousCode) {
+    public Code2sessionResponse code2session(String code, String anonymousCode) {
         AbstractByteDanceMiniProgramInRedisConfigStorage.MiniProgramInfo config =
                 byteDanceMiniProgramService.getMiniProgramConfig();
         Code2sessionRequest request = new Code2sessionRequest();

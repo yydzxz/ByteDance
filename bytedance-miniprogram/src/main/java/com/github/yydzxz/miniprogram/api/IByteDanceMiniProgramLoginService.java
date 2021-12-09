@@ -14,6 +14,6 @@ public interface IByteDanceMiniProgramLoginService {
 
     Code2sessionResponse code2session(Code2sessionRequest request);
 
-    Code2sessionResponse code2sessionWithCode(String code, String anonymousCode);
+    Code2sessionResponse code2session(String code, String anonymousCode);
 
 }
