@@ -20,4 +20,8 @@ public class ByteDanceAppIdHolder {
         HOLDER.set(value);
     }
 
+    public static void remove() {
+        HOLDER.remove();
+    }
+
 }
