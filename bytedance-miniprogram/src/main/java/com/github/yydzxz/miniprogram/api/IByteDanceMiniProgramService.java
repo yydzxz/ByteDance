@@ -15,6 +15,8 @@ public interface IByteDanceMiniProgramService {
 
     IByteDanceMiniProgramLoginService getByteDanceMiniProgramLoginService();
 
+    IByteDanceMiniProgramQrCodeService getByteDanceMiniProgramQrCodeService();
+
     boolean switchover(String appid);
 
     AbstractByteDanceMiniProgramInRedisConfigStorage.MiniProgramInfo getMiniProgramConfig();

@@ -58,6 +58,10 @@
       <scope>provided</scope>
     </dependency>
     <!-- http客户端 end-->
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+    </dependency>
   </dependencies>
 
 
