@@ -10,6 +10,7 @@ import com.github.yydzxz.common.util.ByteDanceAppIdHolder;
 import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramAccessTokenService;
 import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramConfigStorage;
 import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramLoginService;
+import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramQrCodeService;
 import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramService;
 import com.github.yydzxz.miniprogram.api.impl.request.INeedAccessTokenRequest;
 import com.github.yydzxz.miniprogram.api.impl.request.token.AccessTokenRequest;
@@ -54,15 +55,18 @@ public class ByteDanceMiniProgramServiceImpl implements IByteDanceMiniProgramSer
 
     private IByteDanceMiniProgramConfigStorage byteDanceMiniProgramConfigStorage;
 
-    private IByteDanceMiniProgramAccessTokenService getByteDanceMiniProgramTokenService;
+    private IByteDanceMiniProgramAccessTokenService byteDanceMiniProgramTokenService;
 
-    private IByteDanceMiniProgramLoginService getByteDanceMiniProgramLoginService;
+    private IByteDanceMiniProgramLoginService byteDanceMiniProgramLoginService;
+
+    private IByteDanceMiniProgramQrCodeService byteDanceMiniProgramQrCodeService;
 
     public ByteDanceMiniProgramServiceImpl(IByteDanceHttpClient byteDanceHttpClient, IByteDanceMiniProgramConfigStorage byteDanceMiniProgramConfigStorage) {
         this.byteDanceHttpClient = byteDanceHttpClient;
         this.byteDanceMiniProgramConfigStorage = byteDanceMiniProgramConfigStorage;
-        this.getByteDanceMiniProgramTokenService = new ByteDanceMiniProgramAccessTokenServiceImpl(this);
-        this.getByteDanceMiniProgramLoginService = new ByteDanceMiniProgramLoginServiceImpl(this);
+        this.byteDanceMiniProgramTokenService = new ByteDanceMiniProgramAccessTokenServiceImpl(this);
+        this.byteDanceMiniProgramLoginService = new ByteDanceMiniProgramLoginServiceImpl(this);
+        this.byteDanceMiniProgramQrCodeService = new ByteDanceMiniProgramQrCodeServiceImpl(this);
     }
 
     @Override
@@ -72,12 +76,17 @@ public class ByteDanceMiniProgramServiceImpl implements IByteDanceMiniProgramSer
 
     @Override
     public IByteDanceMiniProgramAccessTokenService getByteDanceMiniProgramTokenService() {
-        return getByteDanceMiniProgramTokenService;
+        return byteDanceMiniProgramTokenService;
     }
 
     @Override
     public IByteDanceMiniProgramLoginService getByteDanceMiniProgramLoginService() {
-        return getByteDanceMiniProgramLoginService;
+        return byteDanceMiniProgramLoginService;
+    }
+
+    @Override
+    public IByteDanceMiniProgramQrCodeService getByteDanceMiniProgramQrCodeService() {
+        return byteDanceMiniProgramQrCodeService;
     }
 
     @Override
@@ -128,7 +137,7 @@ public class ByteDanceMiniProgramServiceImpl implements IByteDanceMiniProgramSer
 //            AccessTokenResponse response = get(url, AccessTokenResponse.class);
 
             AccessTokenRequest request = new AccessTokenRequest(appId, appSecret);
-            AccessTokenResponse response = getByteDanceMiniProgramTokenService.getAccessToken(request);
+            AccessTokenResponse response = byteDanceMiniProgramTokenService.getAccessToken(request);
             byteDanceMiniProgramConfigStorage.updateAccessToken(appId, response.getAccessToken(), response.getExpiresIn());
             return byteDanceMiniProgramConfigStorage.getAccessToken(appId);
         } catch (Exception e) {

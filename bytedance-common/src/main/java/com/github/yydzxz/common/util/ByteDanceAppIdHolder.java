@@ -5,12 +5,7 @@ package com.github.yydzxz.common.util;
  * @date 2021/09/02
  **/
 public class ByteDanceAppIdHolder {
-    private final static ThreadLocal<String> HOLDER = new ThreadLocal<String>() {
-        @Override
-        protected String initialValue() {
-            return "";
-        }
-    };
+    private final static ThreadLocal<String> HOLDER = ThreadLocal.withInitial(() -> "");
 
     public static String get() {
         return HOLDER.get();
