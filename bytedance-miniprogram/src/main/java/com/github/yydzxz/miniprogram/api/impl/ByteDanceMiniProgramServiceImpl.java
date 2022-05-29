@@ -82,6 +82,10 @@ public class ByteDanceMiniProgramServiceImpl implements IByteDanceMiniProgramSer
     public IByteDanceMiniProgramLoginService getByteDanceMiniProgramLoginService() {
         return byteDanceMiniProgramLoginService;
     }
+    @Override
+    public IByteDanceMiniProgramKefuMessageService getByteDanceMiniProgramKefuMessageService(){
+        return byteDanceMiniProgramKefuMessageService;
+    }
 
     @Override
     public IByteDanceMiniProgramQrCodeService getByteDanceMiniProgramQrCodeService() {
