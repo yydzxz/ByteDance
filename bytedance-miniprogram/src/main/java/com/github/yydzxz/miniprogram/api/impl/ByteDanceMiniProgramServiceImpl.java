@@ -7,11 +7,7 @@ import com.github.yydzxz.common.http.IByteDanceHttpClient;
 import com.github.yydzxz.common.http.IExecutable;
 import com.github.yydzxz.common.http.IRetryableExecutor;
 import com.github.yydzxz.common.util.ByteDanceAppIdHolder;
-import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramAccessTokenService;
-import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramConfigStorage;
-import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramLoginService;
-import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramQrCodeService;
-import com.github.yydzxz.miniprogram.api.IByteDanceMiniProgramService;
+import com.github.yydzxz.miniprogram.api.*;
 import com.github.yydzxz.miniprogram.api.impl.request.INeedAccessTokenRequest;
 import com.github.yydzxz.miniprogram.api.impl.request.token.AccessTokenRequest;
 import com.github.yydzxz.miniprogram.api.impl.response.token.AccessTokenResponse;
@@ -61,12 +57,15 @@ public class ByteDanceMiniProgramServiceImpl implements IByteDanceMiniProgramSer
 
     private IByteDanceMiniProgramQrCodeService byteDanceMiniProgramQrCodeService;
 
+    private IByteDanceMiniProgramKefuMessageService byteDanceMiniProgramKefuMessageService;
+
     public ByteDanceMiniProgramServiceImpl(IByteDanceHttpClient byteDanceHttpClient, IByteDanceMiniProgramConfigStorage byteDanceMiniProgramConfigStorage) {
         this.byteDanceHttpClient = byteDanceHttpClient;
         this.byteDanceMiniProgramConfigStorage = byteDanceMiniProgramConfigStorage;
         this.byteDanceMiniProgramTokenService = new ByteDanceMiniProgramAccessTokenServiceImpl(this);
         this.byteDanceMiniProgramLoginService = new ByteDanceMiniProgramLoginServiceImpl(this);
         this.byteDanceMiniProgramQrCodeService = new ByteDanceMiniProgramQrCodeServiceImpl(this);
+        this.byteDanceMiniProgramKefuMessageService = new ByteDanceMiniProgramKefuMessageServiceImpl(this);
     }
 
     @Override
