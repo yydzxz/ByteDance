@@ -8,7 +8,12 @@
 1. 两个接口地址是一样的。
 2. get接口，用于后面在字节小程序后台配置客户消息推送地址的时候，接收字节的确认请求
 3. post接口，用于接收字节推送过来的 客户发送的消息
-   ![image](./images/接收客户消息.png)
+- ![image](./images/接收客户消息.png)
 #### 配置客户消息推送地址
 1. token要记住，配置完毕就不能查看了
-![image](./images/配置客户消息推送地址.png)
+- ![image](./images/配置客户消息推送地址.png)
+
+#### 发送客服消息
+```shell
+byteDanceMiniProgramService.getByteDanceMiniProgramKefuMessageService()
+```
